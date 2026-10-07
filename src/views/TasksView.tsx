@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import {
   Plus,
-  Sparkles,
   Calendar,
   Clock,
   Gauge,
@@ -10,6 +9,7 @@ import {
   Filter,
   CheckSquare,
   HelpCircle,
+  Search,
 } from 'lucide-react'
 import { useStoodify } from '../context'
 import { Card } from '../components/ui/Card'
@@ -30,10 +30,12 @@ export const TasksView: React.FC = () => {
 
   const [statusFilter, setStatusFilter] = useState<'all' | TaskStatus>('all')
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('all')
+  const [searchTerm, setSearchTerm] = useState('')
 
   const filteredTasks = tasks.filter((t) => {
     if (statusFilter !== 'all' && t.status !== statusFilter) return false
     if (selectedSubjectId !== 'all' && t.subjectId !== selectedSubjectId) return false
+    if (searchTerm && !`${t.title} ${t.description ?? ''}`.toLocaleLowerCase('id').includes(searchTerm.toLocaleLowerCase('id'))) return false
     return true
   })
 
@@ -42,22 +44,21 @@ export const TasksView: React.FC = () => {
   return (
     <div className="space-y-8 text-left relative z-10">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col justify-between gap-4">
         <div>
-          <h1 className="text-3xl sm:text-4xl text-[#111118] font-normal tracking-tight">
+          <h1 className="text-3xl text-[#111118] font-normal tracking-tight">
             Tugas & Prioritas Cerdas
           </h1>
           <p className="text-sm text-[#111118]/70 mt-1 max-w-xl">
-            Stoodify menghitung skor prioritas multi-faktor secara otomatis agar kamu tahu persis tugas mana yang harus diselesaikan terlebih dahulu.
+            Skor contoh membantu membandingkan tenggat, kesulitan, durasi, dan progres tugas.
           </p>
         </div>
 
         <PillButton
           variant="primary"
           size="md"
-          withArrow
           onClick={openAddTask}
-          className="self-start sm:self-auto w-full sm:w-auto"
+          className="self-start w-full"
         >
           <Plus size={18} />
           <span>Tambah Tugas Baru</span>
@@ -65,12 +66,13 @@ export const TasksView: React.FC = () => {
       </div>
 
       {/* Filter Tabs & Subject Pill Selector */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-[24px] bg-white border border-[#e1edff] shadow-hard-card">
+      <div className="flex flex-col justify-between gap-4 p-4 rounded-[24px] bg-white border border-[#e1edff] shadow-hard-card">
         {/* Status Filters */}
         <div className="flex flex-wrap items-center gap-1.5">
           <button
             onClick={() => setStatusFilter('all')}
-            className={`px-3.5 py-1.5 rounded-[5000px] text-xs transition-colors cursor-pointer font-normal ${
+            aria-pressed={statusFilter === 'all'}
+            className={`min-h-11 px-3.5 py-2 rounded-[5000px] text-xs transition-colors cursor-pointer font-normal ${
               statusFilter === 'all'
                 ? 'bg-[#2727e6] text-white'
                 : 'bg-[#f0f6ff] text-[#111118] hover:bg-[#e1edff]'
@@ -80,7 +82,8 @@ export const TasksView: React.FC = () => {
           </button>
           <button
             onClick={() => setStatusFilter('belum-mulai')}
-            className={`px-3.5 py-1.5 rounded-[5000px] text-xs transition-colors cursor-pointer font-normal ${
+            aria-pressed={statusFilter === 'belum-mulai'}
+            className={`min-h-11 px-3.5 py-2 rounded-[5000px] text-xs transition-colors cursor-pointer font-normal ${
               statusFilter === 'belum-mulai'
                 ? 'bg-[#2727e6] text-white'
                 : 'bg-[#f0f6ff] text-[#111118] hover:bg-[#e1edff]'
@@ -90,7 +93,8 @@ export const TasksView: React.FC = () => {
           </button>
           <button
             onClick={() => setStatusFilter('sedang-dikerjakan')}
-            className={`px-3.5 py-1.5 rounded-[5000px] text-xs transition-colors cursor-pointer font-normal ${
+            aria-pressed={statusFilter === 'sedang-dikerjakan'}
+            className={`min-h-11 px-3.5 py-2 rounded-[5000px] text-xs transition-colors cursor-pointer font-normal ${
               statusFilter === 'sedang-dikerjakan'
                 ? 'bg-[#2727e6] text-white'
                 : 'bg-[#f0f6ff] text-[#111118] hover:bg-[#e1edff]'
@@ -100,7 +104,8 @@ export const TasksView: React.FC = () => {
           </button>
           <button
             onClick={() => setStatusFilter('selesai')}
-            className={`px-3.5 py-1.5 rounded-[5000px] text-xs transition-colors cursor-pointer font-normal ${
+            aria-pressed={statusFilter === 'selesai'}
+            className={`min-h-11 px-3.5 py-2 rounded-[5000px] text-xs transition-colors cursor-pointer font-normal ${
               statusFilter === 'selesai'
                 ? 'bg-[#16ab59] text-white'
                 : 'bg-[#f0f6ff] text-[#111118] hover:bg-[#e1edff]'
@@ -110,13 +115,19 @@ export const TasksView: React.FC = () => {
           </button>
         </div>
 
-        {/* Subject Filter */}
-        <div className="flex items-center gap-2">
-          <Filter size={14} className="text-[#111118]/60" />
+        <div className="grid w-full grid-cols-1 gap-3">
+          <label className="flex min-h-11 items-center gap-2 rounded-[5000px] border border-[#e1edff] bg-[#f0f6ff] px-4">
+            <Search size={15} aria-hidden="true" className="shrink-0 text-[#111118]/70" />
+            <span className="sr-only">Cari tugas</span>
+            <input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Cari tugas" className="min-w-0 flex-1 bg-transparent text-sm text-[#111118] placeholder:text-[#111118]/65 focus:outline-none" />
+          </label>
+          <label className="flex min-h-11 items-center gap-2">
+            <Filter size={14} aria-hidden="true" className="shrink-0 text-[#111118]/70" />
+            <span className="sr-only">Filter mata pelajaran</span>
           <select
             value={selectedSubjectId}
             onChange={(e) => setSelectedSubjectId(e.target.value)}
-            className="text-xs bg-[#f0f6ff] border border-[#e1edff] rounded-[5000px] py-1.5 px-3 outline-none text-[#111118] cursor-pointer"
+            className="min-h-11 min-w-0 flex-1 rounded-[5000px] border border-[#e1edff] bg-[#f0f6ff] px-3 text-xs text-[#111118] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2727e6]"
           >
             <option value="all">Semua Mata Pelajaran</option>
             {subjects.map((sub) => (
@@ -125,6 +136,7 @@ export const TasksView: React.FC = () => {
               </option>
             ))}
           </select>
+          </label>
         </div>
       </div>
 
@@ -132,7 +144,8 @@ export const TasksView: React.FC = () => {
       <div className="space-y-4">
         {filteredTasks.length === 0 ? (
           <div className="p-12 text-center bg-white rounded-[24px] border border-[#e1edff]">
-            <p className="text-[#111118]/60 text-sm">Tidak ada tugas dalam kategori ini.</p>
+            <p className="mb-4 text-sm text-[#111118]/75">Tidak ada tugas yang cocok dengan filter ini.</p>
+            {tasks.length === 0 ? <PillButton size="sm" onClick={openAddTask}>Tambahkan tugas</PillButton> : <button type="button" onClick={() => { setStatusFilter('all'); setSelectedSubjectId('all'); setSearchTerm('') }} className="min-h-11 text-sm text-[#2727e6] underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2727e6]">Hapus filter</button>}
           </div>
         ) : (
           filteredTasks.map((task) => {
@@ -144,7 +157,7 @@ export const TasksView: React.FC = () => {
                 key={task.id}
                 className={`transition-all w-full ${isCompleted ? 'opacity-70 bg-[#fafcff]' : 'bg-white'}`}
               >
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div className="flex flex-col justify-between gap-6">
                   {/* Left Column: Title & Meta */}
                   <div className="space-y-3 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -178,7 +191,7 @@ export const TasksView: React.FC = () => {
 
                     <div>
                       <h3
-                        className={`text-lg sm:text-xl text-[#111118] font-normal ${
+                        className={`text-lg text-[#111118] font-normal ${
                           isCompleted ? 'line-through text-gray-400' : ''
                         }`}
                       >
@@ -195,7 +208,7 @@ export const TasksView: React.FC = () => {
                     {task.subtasks.length > 0 && (
                       <div className="pt-1 space-y-1.5">
                         <div className="flex items-center gap-2 text-xs text-[#111118]/60">
-                          <CheckSquare size={13} className="text-[#2727e6]" />
+                        <CheckSquare size={13} className="text-[#111118]" />
                           <span>
                             Subtugas ({task.subtasks.filter((s) => s.completed).length}/
                             {task.subtasks.length}):
@@ -208,7 +221,7 @@ export const TasksView: React.FC = () => {
                               onClick={() => toggleSubtask(task.id, st.id)}
                               className={`text-xs px-2.5 py-1 rounded-[5000px] border flex items-center gap-1.5 transition-colors cursor-pointer ${
                                 st.completed
-                                  ? 'bg-[#e8f7ee] border-[#16ab59]/30 text-[#16ab59] line-through'
+                                  ? 'bg-[#e1edff] border-[#e1edff] text-[#111118]/70 line-through'
                                   : 'bg-[#f0f6ff] border-[#e1edff] text-[#111118] hover:bg-[#e1edff]'
                               }`}
                             >
@@ -222,14 +235,14 @@ export const TasksView: React.FC = () => {
                   </div>
 
                   {/* Right Column: AI Score & Progress */}
-                  <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end justify-between border-t lg:border-t-0 pt-4 lg:pt-0 border-[#e1edff] gap-4 min-w-[220px]">
+                  <div className="flex flex-col items-start justify-between border-t pt-4 border-[#e1edff] gap-4 min-w-[220px]">
                     {/* Priority Badge & Explainer Link */}
-                    <div className="text-left sm:text-right lg:text-right">
-                      <div className="flex items-center gap-1.5 sm:justify-end">
+                    <div className="text-left">
+                      <div className="flex items-center gap-1.5">
                         <Badge
                           variant={
                             task.priority === 'sangat-tinggi'
-                              ? 'priority-urgent'
+                            ? 'priority-urgent'
                               : task.priority === 'tinggi'
                               ? 'priority-high'
                               : task.priority === 'sedang'
@@ -245,13 +258,13 @@ export const TasksView: React.FC = () => {
                         onClick={() => openPriorityExplainer(task)}
                         className="text-xs text-[#2727e6] hover:underline flex items-center gap-1 mt-1 cursor-pointer"
                       >
-                        <Sparkles size={12} />
-                        <span>Mengapa skor ini? (Breakdown) →</span>
+                        <HelpCircle size={12} />
+                        <span>Mengapa skor ini?</span>
                       </button>
                     </div>
 
                     {/* Progress Slider Bar */}
-                    <div className="w-full sm:w-48 lg:w-full space-y-1">
+                    <div className="w-full space-y-1">
                       <div className="flex justify-between text-xs text-[#111118]/70">
                         <span>Progres:</span>
                         <span className="font-mono text-[#2727e6]">{task.progressPercent}%</span>
@@ -272,7 +285,7 @@ export const TasksView: React.FC = () => {
                         }
                         className={`text-xs px-3 py-1.5 rounded-[5000px] border flex items-center gap-1 transition-colors cursor-pointer ${
                           isCompleted
-                            ? 'bg-[#e8f7ee] text-[#16ab59] border-[#16ab59]'
+                            ? 'bg-[#e1edff] text-[#111118] border-[#e1edff]'
                             : 'bg-white text-[#111118] border-[#e1edff] hover:bg-[#f0f6ff]'
                         }`}
                       >
@@ -287,6 +300,8 @@ export const TasksView: React.FC = () => {
                           }
                         }}
                         className="p-1.5 rounded-[5000px] text-gray-400 hover:text-[#ff4141] hover:bg-[#ffe8e8] transition-colors cursor-pointer"
+                        type="button"
+                        aria-label={`Hapus tugas ${task.title}`}
                         title="Hapus tugas"
                       >
                         <Trash2 size={16} />
@@ -300,17 +315,17 @@ export const TasksView: React.FC = () => {
         )}
       </div>
 
-      {/* Formula Info Callout Box (SuperHi Style) */}
+      {/* Formula note for the simulated priority score. */}
       <div className="p-6 rounded-[24px] bg-[#f0f6ff] border border-[#2727e6]/30 text-left space-y-2">
         <h4 className="text-base font-normal text-[#111118] flex items-center gap-2">
           <HelpCircle size={18} className="text-[#2727e6]" />
-          <span>Bagaimana AI Stoodify Menghitung Prioritas?</span>
+          <span>Cara membaca skor contoh</span>
         </h4>
         <p className="text-xs text-[#111118]/80 leading-relaxed font-normal">
-          Berbeda dari to-do list umum yang hanya mengurutkan berdasarkan deadline, formula Stoodify menggabungkan:{' '}
+          Kalkulasi lokal mengikuti faktor prioritas di dokumen perencanaan: {' '}
           <strong className="text-[#111118] font-medium">
-            (Urgensi Batas Waktu + Bobot Kesulitan + Durasi Pengerjaan + Risiko Keterlambatan) - Progres Saat Ini
-          </strong>. Setiap kali kamu mencicil progres, prioritas tugas akan menyesuaikan secara dinamis.
+            urgensi (40%), kesulitan (20%), durasi (15%), jenis tugas (15%), dan risiko terlambat (10%), dikurangi progres.
+          </strong> Ini simulasi untuk showcase, bukan layanan AI aktif.
         </p>
       </div>
     </div>

@@ -16,7 +16,7 @@ export const PillButton: React.FC<PillButtonProps> = ({
   ...props
 }) => {
   const baseStyles =
-    'inline-flex items-center justify-center font-normal transition-all cursor-pointer select-none active:translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:translate-y-0'
+    'inline-flex min-h-11 items-center justify-center font-normal transition-colors cursor-pointer select-none active:translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2727e6]'
 
   // Sesuai DESIGN.md: radius 48px, weight 400
   const sizeStyles = {
@@ -39,7 +39,7 @@ export const PillButton: React.FC<PillButtonProps> = ({
     outline:
       'bg-white text-[#111118] border border-[#e1edff] hover:bg-[#f0f6ff] shadow-hard-card',
     danger:
-      'bg-[#ff4141] text-white hover:bg-[#e03030] shadow-hard-cta',
+      'bg-[#111118] text-white hover:bg-[#2727e6] shadow-hard-cta',
   }
 
   return (

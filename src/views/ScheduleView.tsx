@@ -1,244 +1,81 @@
 import React from 'react'
-import {
-  Clock,
-  Sparkles,
-  CheckCircle2,
-  RotateCcw,
-  Zap,
-  ShieldCheck,
-} from 'lucide-react'
+import { CalendarClock, Check, CheckCircle2, Clock3, RotateCcw, X } from 'lucide-react'
 import { useStoodify } from '../context'
 import { PillButton } from '../components/ui/PillButton'
 import { Badge } from '../components/ui/Badge'
 
+const displayDate = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number)
+  return new Date(year, month - 1, day).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })
+}
+
 export const ScheduleView: React.FC = () => {
-  const {
-    sessions,
-    subjects,
-    tasks,
-    startSession,
-    openRescheduleModal,
-    simulateReschedule,
-  } = useStoodify()
-
-  const getSubject = (subjectId: string) => subjects.find((s) => s.id === subjectId)
-  const getTask = (taskId: string) => tasks.find((t) => t.id === taskId)
-
-  // Sort sessions by date and startTime
-  const sortedSessions = [...sessions].sort((a, b) => {
-    const dComp = a.date.localeCompare(b.date)
-    if (dComp !== 0) return dComp
-    return a.startTime.localeCompare(b.startTime)
-  })
+  const { sessions, subjects, tasks, startSession, completeSession, openRescheduleModal, acceptSession, rejectSession, setActiveView } = useStoodify()
+  const getSubject = (id: string) => subjects.find((subject) => subject.id === id)
+  const getTask = (id: string) => tasks.find((task) => task.id === id)
+  const sortedSessions = [...sessions].sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))
 
   return (
-    <div className="space-y-10 text-left relative z-10">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-mono uppercase bg-[#2727e6] text-white px-2.5 py-0.5 rounded-[5000px]">
-              AI Study Scheduler
-            </span>
-            <span className="text-xs text-[#111118]/60">Algoritma Otomatis Bebas Bentrok</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl text-[#111118] font-normal tracking-tight">
-            Rekomendasi Jadwal & Sesi Belajar
-          </h1>
-          <p className="text-sm text-[#111118]/70 mt-1 max-w-2xl font-normal leading-relaxed">
-            Stoodify memecah tugas sekolah menjadi sesi terfokus 30–45 menit. Jadwal ini otomatis menghindari jam sekolah, istirahat, ekskul, dan menjamin tugas selesai sebelum batas waktu.
-          </p>
-        </div>
+    <div className="relative z-10 space-y-8 text-left">
+      <header className="max-w-3xl">
+        <p className="mb-2 font-mono text-xs text-[#111118]/70">USULAN BERDASARKAN DATA CONTOH</p>
+        <h1 className="text-3xl tracking-tight">Sesi belajar</h1>
+        <p className="mt-3 text-sm leading-relaxed text-[#111118]/75">
+          Tinjau waktu dan target setiap sesi. Terima usulan, tolak, atau simulasikan perubahan bila sesi terlewat.
+        </p>
+      </header>
 
-        <PillButton
-          variant="dark"
-          size="md"
-          onClick={() => openRescheduleModal()}
-          className="self-start sm:self-auto flex-shrink-0 w-full sm:w-auto"
-        >
-          ⚡ Simulasi Reschedule
-        </PillButton>
-      </div>
-
-      {/* Standout Showcase: How It Works & Rescheduling Principle */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="p-5 rounded-[24px] bg-white border border-[#e1edff] shadow-hard-card space-y-2">
-          <div className="w-9 h-9 rounded-[5000px] bg-[#e1edff] text-[#2727e6] flex items-center justify-center">
-            <Zap size={18} />
-          </div>
-          <h4 className="text-base font-normal text-[#111118]">1. Chunking Realistis</h4>
-          <p className="text-xs text-[#111118]/70 leading-relaxed font-normal">
-            Tugas 3 jam tidak dipaksakan selesai dalam 1 malam. AI membaginya ke dalam 3 sesi 45 menit dengan target terukur.
-          </p>
-        </div>
-
-        <div className="p-5 rounded-[24px] bg-white border border-[#e1edff] shadow-hard-card space-y-2">
-          <div className="w-9 h-9 rounded-[5000px] bg-[#ffe8e8] text-[#ff4141] flex items-center justify-center">
-            <ShieldCheck size={18} />
-          </div>
-          <h4 className="text-base font-normal text-[#111118]">2. Proteksi Waktu Siswa</h4>
-          <p className="text-xs text-[#111118]/70 leading-relaxed font-normal">
-            Sistem mengunci jam sekolah (07.00 - 15.30), ekskul robotik, dan waktu makan keluarga agar siswa tidak *burnout*.
-          </p>
-        </div>
-
-        <div className="p-5 rounded-[24px] bg-white border border-[#2727e6] shadow-hard-card space-y-2">
-          <div className="w-9 h-9 rounded-[5000px] bg-[#2727e6] text-white flex items-center justify-center">
-            <RotateCcw size={18} />
-          </div>
-          <h4 className="text-base font-normal text-[#111118]">3. Adaptive Rescheduling</h4>
-          <p className="text-xs text-[#111118]/70 leading-relaxed font-normal">
-            Jika satu sesi terlewat karena urusan mendadak, AI otomatis mencari slot kosong berikutnya sebelum batas deadline.
-          </p>
-        </div>
-      </div>
-
-      {/* Study Sessions Feed */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between border-b border-[#e1edff] pb-3">
-          <h2 className="text-2xl text-[#111118] font-normal">
-            Daftar Sesi Rekomendasi AI
-          </h2>
-          <span className="text-xs font-mono text-[#111118]/60">
-            Total {sortedSessions.length} Sesi Terjadwal
-          </span>
-        </div>
-
-        <div className="space-y-4">
-          {sortedSessions.map((session) => {
-            const subj = getSubject(session.subjectId)
-            const parentTask = getTask(session.taskId)
-            const isCompleted = session.status === 'completed'
-            const isRescheduled = session.status === 'rescheduled'
-
-            return (
-              <div
-                key={session.id}
-                className={`p-6 sm:p-7 rounded-[24px] border transition-all w-full ${
-                  isCompleted
-                    ? 'bg-[#fafcff] border-[#e1edff] opacity-75 shadow-none'
-                    : isRescheduled
-                    ? 'bg-[#fff5f5] border-[#ffbac4] shadow-hard-card'
-                    : 'bg-white border-[#e1edff] shadow-hard-card hover:border-[#2727e6]'
-                }`}
-              >
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                  {/* Left Column: Timing & Details */}
-                  <div className="space-y-2.5 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className="text-[11px] font-mono px-2.5 py-0.5 rounded-[5000px] text-white"
-                        style={{ backgroundColor: subj?.color || '#2727e6' }}
-                      >
-                        {subj?.name}
-                      </span>
-                      <span className="text-xs font-mono text-[#111118] bg-[#f0f6ff] border border-[#e1edff] px-2.5 py-0.5 rounded-[5000px] flex items-center gap-1">
-                        <Clock size={12} className="text-[#2727e6]" />
-                        {new Date(session.date).toLocaleDateString('id-ID', {
-                          weekday: 'short',
-                          day: 'numeric',
-                          month: 'short',
-                        })}{' '}
-                        • {session.startTime} - {session.endTime} ({session.durationMinutes} Menit)
-                      </span>
-                      {session.riskLevel === 'tinggi' && (
-                        <span className="text-[11px] font-mono px-2 py-0.5 rounded-[5000px] bg-[#ffe8e8] text-[#ff4141]">
-                          Risiko Tinggi
-                        </span>
-                      )}
-                    </div>
-
-                    <div>
-                      <h3
-                        className={`text-xl text-[#111118] font-normal ${
-                          isCompleted ? 'line-through text-gray-400' : ''
-                        }`}
-                      >
-                        {session.title}
-                      </h3>
-                      {parentTask && (
-                        <p className="text-xs text-[#2727e6] mt-0.5 font-mono">
-                          Tugas Terkait: {parentTask.title}
-                        </p>
-                      )}
-                    </div>
-
-                    <p className="text-sm text-[#111118]/80 leading-relaxed font-normal">
-                      🎯 <strong className="font-medium text-[#111118]">Target Sesi:</strong>{' '}
-                      {session.targetDescription}
-                    </p>
-
-                    {/* AI Reasoning Pill */}
-                    <div className="p-3 rounded-[16px] bg-[#f0f6ff] border border-[#e1edff] text-xs text-[#111118]/80 flex items-start gap-2">
-                      <Sparkles size={14} className="text-[#2727e6] flex-shrink-0 mt-0.5" />
-                      <span>
-                        <strong className="text-[#111118] font-medium">Alasan AI: </strong>
-                        {session.reason}
-                      </span>
-                    </div>
-
-                    {/* Rescheduled Notice Banner */}
-                    {isRescheduled && session.rescheduledTo && (
-                      <div className="p-3 rounded-[16px] bg-[#fff0f3] border border-[#ff4141] text-xs text-[#ff4141] space-y-1">
-                        <div className="flex items-center gap-1.5 font-medium">
-                          <RotateCcw size={14} />
-                          <span>Status: Sesi Ini Dilewati Siswa</span>
-                        </div>
-                        <p className="text-[11px] text-[#111118]/80 leading-relaxed">
-                          ➡️ {session.rescheduledTo.reason} (Target baru: {session.rescheduledTo.date} jam {session.rescheduledTo.startTime} - {session.rescheduledTo.endTime} WIB).
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Right Column: Actions */}
-                  <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between border-t lg:border-t-0 pt-4 lg:pt-0 border-[#e1edff] gap-3 min-w-[200px]">
-                    <div className="text-left lg:text-right">
-                      <span className="text-[11px] text-[#111118]/60 uppercase font-mono block">
-                        Status Sesi
-                      </span>
-                      <Badge
-                        variant={
-                          isCompleted
-                            ? 'success'
-                            : isRescheduled
-                            ? 'priority-urgent'
-                            : 'active'
-                        }
-                        size="sm"
-                      >
-                        {isCompleted
-                          ? 'SELESAI'
-                          : isRescheduled
-                          ? 'DI-RESCHEDULE'
-                          : 'TERJADWAL'}
-                      </Badge>
-                    </div>
-
-                    {!isCompleted && !isRescheduled && (
-                      <div className="flex items-center gap-2">
-                        <PillButton variant="outline" size="sm" onClick={() => simulateReschedule(session.id)} title="Simulasikan sesi ini terlewat" className="w-full sm:w-auto">
-                          Lewati
-                        </PillButton>
-                        <PillButton variant="primary" size="md" withArrow onClick={() => startSession(session)} className="w-full sm:w-auto">
-                          Mulai Belajar
-                        </PillButton>
-                      </div>
-                    )}
-
-                    {isCompleted && (
-                      <div className="text-xs text-[#16ab59] flex items-center gap-1">
-                        <CheckCircle2 size={16} />
-                        <span>Selesai Dikerjakan</span>
-                      </div>
-                    )}
-                  </div>
+      {sortedSessions.length === 0 ? <div className="rounded-[24px] border border-[#e1edff] bg-white p-8 text-center">
+        <p className="mb-4 text-sm text-[#111118]/75">Belum ada usulan sesi. Tambahkan tugas untuk melihat contoh rekomendasi.</p>
+        <PillButton size="sm" onClick={() => setActiveView('tasks')}>Lihat tugas</PillButton>
+      </div> : <div className="space-y-4">
+        {sortedSessions.map((session) => {
+          const subject = getSubject(session.subjectId)
+          const parentTask = getTask(session.taskId)
+          const isProposed = session.status === 'proposed'
+          const isCompleted = session.status === 'completed'
+          const isInProgress = session.status === 'in-progress'
+          const isRescheduled = session.status === 'rescheduled'
+          const isRejected = session.status === 'rejected'
+          return <article key={session.id} className={`rounded-[24px] border bg-white p-5 ${isProposed ? 'border-[#2727e6] shadow-hard-card' : 'border-[#e1edff]'}`}>
+            <div className="flex flex-col gap-5">
+              <div className="min-w-0 flex-1 space-y-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-[#e1edff] px-3 py-1 text-xs text-[#111118]">{subject?.name ?? 'Mata pelajaran'}</span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f0f6ff] px-3 py-1 text-xs text-[#111118]">
+                    <Clock3 size={13} aria-hidden="true" />{displayDate(session.date)} · {session.startTime}–{session.endTime} · {session.durationMinutes} menit
+                  </span>
                 </div>
+                <div>
+                  <h2 className="text-xl leading-snug">{session.title}</h2>
+                  {parentTask && <p className="mt-1 break-words text-sm text-[#111118]/70">Tugas: {parentTask.title}</p>}
+                </div>
+                <p className="text-sm leading-relaxed text-[#111118]/80">Target: {session.targetDescription}</p>
+                <div className="rounded-[16px] bg-[#f0f6ff] p-4 text-sm leading-relaxed text-[#111118]/80">
+                  <span className="text-[#111118]">Alasan contoh:</span> {session.reason}
+                </div>
+                {session.rescheduledTo && <p className="text-sm text-[#111118]/75">Sesi asal dipindah ke {displayDate(session.rescheduledTo.date)} pukul {session.rescheduledTo.startTime}.</p>}
               </div>
-            )
-          })}
-        </div>
-      </div>
+
+              <div className="flex flex-col items-start gap-3 border-t border-[#e1edff] pt-4">
+                <Badge variant={isCompleted ? 'success' : isProposed ? 'active' : 'default'} size="sm">
+                  {isProposed ? 'Perlu ditinjau' : isCompleted ? 'Selesai' : isInProgress ? 'Sedang dikerjakan' : isRescheduled ? 'Sesi asal dipindah' : isRejected ? 'Ditolak' : 'Terjadwal'}
+                </Badge>
+                {isProposed && <div className="flex w-full flex-col gap-2">
+                  <PillButton size="sm" onClick={() => acceptSession(session.id)}><Check size={15} aria-hidden="true" />Terima usulan</PillButton>
+                  <PillButton variant="outline" size="sm" onClick={() => rejectSession(session.id)}><X size={15} aria-hidden="true" />Tolak</PillButton>
+                </div>}
+                {session.status === 'scheduled' && <div className="flex w-full flex-col gap-2">
+                  <PillButton variant="outline" size="sm" onClick={() => openRescheduleModal(session)}><RotateCcw size={15} aria-hidden="true" />Simulasikan sesi terlewat</PillButton>
+                  <PillButton size="sm" onClick={() => startSession(session)}><CalendarClock size={15} aria-hidden="true" />Mulai sesi</PillButton>
+                </div>}
+                {isInProgress && <PillButton size="sm" onClick={() => completeSession(session.id, session.targetProgress)}><CheckCircle2 size={15} aria-hidden="true" />Tandai sesi selesai</PillButton>}
+                {isRejected && <p className="max-w-48 text-right text-xs text-[#111118]/70">Usulan ini tidak masuk ke rencana belajar.</p>}
+              </div>
+            </div>
+          </article>
+        })}
+      </div>}
     </div>
   )
 }

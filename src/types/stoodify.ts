@@ -14,6 +14,7 @@ export interface PriorityBreakdown {
   urgencyScore: number
   difficultyScore: number
   durationScore: number
+  importanceScore: number
   lateRiskScore: number
   progressScore: number
   totalScore: number
@@ -49,7 +50,7 @@ export interface Task {
   createdAt: string
 }
 
-export type StudySessionStatus = 'scheduled' | 'in-progress' | 'completed' | 'skipped' | 'rescheduled'
+export type StudySessionStatus = 'proposed' | 'scheduled' | 'in-progress' | 'completed' | 'skipped' | 'rescheduled' | 'rejected'
 
 export interface StudySession {
   id: string

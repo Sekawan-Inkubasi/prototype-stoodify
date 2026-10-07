@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Sparkles, Clock, Gauge } from 'lucide-react'
+import { Clock, Gauge } from 'lucide-react'
 import { useStoodify } from '../../context'
 import { Modal } from '../ui/Modal'
 import { Input, Select } from '../ui/Input'
@@ -11,7 +11,8 @@ import type { TaskType } from '../../types/stoodify'
 const getDefaultDeadline = () => {
   const d = new Date()
   d.setDate(d.getDate() + 3)
-  return `${d.toISOString().split('T')[0]}T23:59`
+  const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return `${date}T23:59`
 }
 
 export const AddTaskModal: React.FC = () => {
@@ -26,11 +27,11 @@ export const AddTaskModal: React.FC = () => {
   const [description, setDescription] = useState('')
 
   // Live priority calculation preview
-  const livePriority = calculatePriority(deadline, difficulty, durationMinutes, 0)
+  const livePriority = calculatePriority(deadline, difficulty, durationMinutes, 0, type)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim()) return
+    if (!title.trim() || !subjectId) return
 
     addTask(
       title.trim(),
@@ -52,11 +53,11 @@ export const AddTaskModal: React.FC = () => {
 
   const difficultyLabels = [
     '',
-    '1 — Sangat Mudah',
-    '2 — Mudah',
-    '3 — Sedang',
-    '4 — Sulit',
-    '5 — Sangat Kompleks',
+    '1: Sangat mudah',
+    '2: Mudah',
+    '3: Sedang',
+    '4: Sulit',
+    '5: Sangat kompleks',
   ]
 
   return (
@@ -64,7 +65,7 @@ export const AddTaskModal: React.FC = () => {
       isOpen={isAddTaskModalOpen}
       onClose={closeAddTask}
       title="Tambah Tugas Baru"
-      subtitle="Input tugas sekolah dalam 1 menit. AI Stoodify akan otomatis menghitung prioritas dan menjadwalkan sesi belajar."
+      subtitle="Masukkan tugas untuk melihat perkiraan prioritas dan contoh usulan sesi belajar."
       maxWidth="lg"
     >
       <form onSubmit={handleSubmit} className="space-y-5">
@@ -78,7 +79,7 @@ export const AddTaskModal: React.FC = () => {
         />
 
         {/* Subject & Type Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           <Select
             label="Mata Pelajaran"
             value={subjectId}
@@ -106,7 +107,7 @@ export const AddTaskModal: React.FC = () => {
         </div>
 
         {/* Deadline & Duration Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           <Input
             label="Batas Waktu (Deadline)"
             type="datetime-local"
@@ -174,8 +175,8 @@ export const AddTaskModal: React.FC = () => {
         <div className="p-4 rounded-[20px] bg-[#f0f6ff] border border-[#2727e6]/30 text-left">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <Sparkles size={16} className="text-[#2727e6]" />
-              <span className="text-sm font-normal text-[#111118]">Kalkulasi Prioritas AI Stoodify:</span>
+              <Gauge size={16} className="text-[#2727e6]" />
+              <span className="text-sm font-normal text-[#111118]">Perkiraan prioritas lokal:</span>
             </div>
             <Badge
               variant={
@@ -189,11 +190,11 @@ export const AddTaskModal: React.FC = () => {
               }
               size="sm"
             >
-              Skor {livePriority.score} • {livePriority.priority.replace('-', ' ').toUpperCase()}
+              Skor contoh {livePriority.score} • {livePriority.priority.replace('-', ' ').toUpperCase()}
             </Badge>
           </div>
           <p className="text-xs text-[#111118]/80 leading-relaxed font-normal">
-            {livePriority.reason}
+            {livePriority.reason} Tidak menggunakan model AI.
           </p>
         </div>
 
@@ -211,7 +212,7 @@ export const AddTaskModal: React.FC = () => {
             variant="primary"
             withArrow
           >
-            Simpan & Jadwalkan Sesi Belajar
+            Simpan dan lihat usulan sesi
           </PillButton>
         </div>
       </form>

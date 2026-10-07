@@ -9,8 +9,8 @@ import type {
 } from '../types/stoodify'
 
 export const initialProfile: StudentProfile = {
-  name: 'Naufal Pratama',
-  school: 'SMK Negeri 1 Cimahi',
+  name: 'Siswa contoh',
+  school: 'SMK contoh',
   grade: 'Kelas XII',
   major: 'Sistem Informasi, Jaringan & Aplikasi (SIJA)',
   preferredStudyHours: {
@@ -27,7 +27,7 @@ export const initialSubjects: Subject[] = [
     id: 'subj-pwb',
     name: 'Pemrograman Web & Bergerak',
     code: 'PWB',
-    teacher: 'Pak Hendra, M.Kom',
+    teacher: 'Guru mapel',
     color: '#2727e6', // Electric Iris
     accentBg: '#e1edff',
     iconName: 'Code',
@@ -37,7 +37,7 @@ export const initialSubjects: Subject[] = [
     id: 'subj-bd',
     name: 'Basis Data Terdistribusi',
     code: 'BD',
-    teacher: 'Ibu Nurul, S.T.',
+    teacher: 'Guru mapel',
     color: '#16ab59', // Jelly Green
     accentBg: '#e8f7ee',
     iconName: 'Database',
@@ -47,7 +47,7 @@ export const initialSubjects: Subject[] = [
     id: 'subj-mtk',
     name: 'Matematika Terapan',
     code: 'MTK',
-    teacher: 'Pak Bambang, M.Pd',
+    teacher: 'Guru mapel',
     color: '#ff4141', // Marker Red
     accentBg: '#ffe8e8',
     iconName: 'Calculator',
@@ -57,7 +57,7 @@ export const initialSubjects: Subject[] = [
     id: 'subj-aij',
     name: 'Administrasi Infrastruktur Jaringan',
     code: 'AIJ',
-    teacher: 'Pak Dedi, S.Kom',
+    teacher: 'Guru mapel',
     color: '#ffda00', // Hi-Yellow
     accentBg: '#fffbe0',
     iconName: 'Network',
@@ -67,7 +67,7 @@ export const initialSubjects: Subject[] = [
     id: 'subj-bind',
     name: 'Bahasa Indonesia Kejuruan',
     code: 'BIND',
-    teacher: 'Ibu Rina, M.Pd',
+    teacher: 'Guru mapel',
     color: '#ffbac4', // Bubblegum Pink
     accentBg: '#fff0f3',
     iconName: 'BookOpen',
@@ -77,7 +77,7 @@ export const initialSubjects: Subject[] = [
     id: 'subj-bing',
     name: 'Bahasa Inggris Teknik',
     code: 'BING',
-    teacher: 'Ms. Sarah, M.Hum',
+    teacher: 'Guru mapel',
     color: '#91d8ec', // Powder Sky
     accentBg: '#eef8fc',
     iconName: 'Globe',
@@ -86,10 +86,13 @@ export const initialSubjects: Subject[] = [
 ]
 
 // Today's date relative helper
-const getRelativeDate = (offsetDays: number): string => {
+export const getRelativeDate = (offsetDays: number): string => {
   const d = new Date()
   d.setDate(d.getDate() + offsetDays)
-  return d.toISOString().split('T')[0]
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 export const initialTasks: Task[] = [
@@ -109,6 +112,7 @@ export const initialTasks: Task[] = [
       urgencyScore: 38,
       difficultyScore: 24,
       durationScore: 20,
+      importanceScore: 14,
       lateRiskScore: 18,
       progressScore: 8,
       totalScore: 92,
@@ -138,6 +142,7 @@ export const initialTasks: Task[] = [
       urgencyScore: 28,
       difficultyScore: 18,
       durationScore: 16,
+      importanceScore: 11,
       lateRiskScore: 20,
       progressScore: 4,
       totalScore: 78,
@@ -167,6 +172,7 @@ export const initialTasks: Task[] = [
       urgencyScore: 16,
       difficultyScore: 24,
       durationScore: 12,
+      importanceScore: 11,
       lateRiskScore: 10,
       progressScore: 0,
       totalScore: 62,
@@ -195,6 +201,7 @@ export const initialTasks: Task[] = [
       urgencyScore: 8,
       difficultyScore: 10,
       durationScore: 10,
+      importanceScore: 11,
       lateRiskScore: 8,
       progressScore: 0,
       totalScore: 36,
@@ -223,6 +230,7 @@ export const initialTasks: Task[] = [
       urgencyScore: 20,
       difficultyScore: 18,
       durationScore: 16,
+      importanceScore: 11,
       lateRiskScore: 16,
       progressScore: 100,
       totalScore: 70,
@@ -313,7 +321,7 @@ export const initialSchedules: SchoolSchedule[] = [
     startTime: '07:30',
     endTime: '09:45',
     room: 'Ruang 302',
-    teacher: 'Pak Bambang, M.Pd',
+    teacher: 'Guru mapel',
   },
   {
     id: 'sch-2',
@@ -322,7 +330,7 @@ export const initialSchedules: SchoolSchedule[] = [
     startTime: '10:00',
     endTime: '12:15',
     room: 'Lab Komputer 2',
-    teacher: 'Pak Hendra, M.Kom',
+    teacher: 'Guru mapel',
   },
   {
     id: 'sch-3',
@@ -331,7 +339,7 @@ export const initialSchedules: SchoolSchedule[] = [
     startTime: '13:00',
     endTime: '15:15',
     room: 'Ruang 302',
-    teacher: 'Ibu Rina, M.Pd',
+    teacher: 'Guru mapel',
   },
   {
     id: 'sch-4',
@@ -340,7 +348,7 @@ export const initialSchedules: SchoolSchedule[] = [
     startTime: '07:00',
     endTime: '11:30',
     room: 'Lab Jaringan Komputer',
-    teacher: 'Pak Dedi, S.Kom',
+    teacher: 'Guru mapel',
   },
   {
     id: 'sch-5',
@@ -349,7 +357,7 @@ export const initialSchedules: SchoolSchedule[] = [
     startTime: '12:30',
     endTime: '15:00',
     room: 'Lab Komputer 1',
-    teacher: 'Ibu Nurul, S.T.',
+    teacher: 'Guru mapel',
   },
   {
     id: 'sch-6',
@@ -358,7 +366,7 @@ export const initialSchedules: SchoolSchedule[] = [
     startTime: '07:00',
     endTime: '10:00',
     room: 'Lab Komputer 2',
-    teacher: 'Pak Hendra, M.Kom',
+    teacher: 'Guru mapel',
   },
   {
     id: 'sch-7',
@@ -367,7 +375,7 @@ export const initialSchedules: SchoolSchedule[] = [
     startTime: '10:15',
     endTime: '12:00',
     room: 'Ruang 302',
-    teacher: 'Ms. Sarah, M.Hum',
+    teacher: 'Guru mapel',
   },
   {
     id: 'sch-8',
@@ -376,7 +384,7 @@ export const initialSchedules: SchoolSchedule[] = [
     startTime: '07:00',
     endTime: '11:30',
     room: 'Lab Komputer 1',
-    teacher: 'Ibu Nurul, S.T.',
+    teacher: 'Guru mapel',
   },
   {
     id: 'sch-9',
@@ -385,7 +393,7 @@ export const initialSchedules: SchoolSchedule[] = [
     startTime: '07:30',
     endTime: '11:15',
     room: 'Lab Jaringan Komputer',
-    teacher: 'Pak Dedi, S.Kom',
+    teacher: 'Guru mapel',
   },
 ]
 

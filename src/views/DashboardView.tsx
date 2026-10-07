@@ -1,383 +1,131 @@
 import React from 'react'
-import {
-  Sparkles,
-  Clock,
-  AlertTriangle,
-  ChevronRight,
-  TrendingUp,
-  Brain,
-} from 'lucide-react'
+import { CalendarClock, ChevronRight, CircleHelp, Clock3, NotebookPen } from 'lucide-react'
 import { useStoodify } from '../context'
 import { Card } from '../components/ui/Card'
 import { PillButton } from '../components/ui/PillButton'
 import { Badge } from '../components/ui/Badge'
 
-const getTodayDate = () => new Date().toISOString().split('T')[0]
+const localDate = () => {
+  const date = new Date()
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
 
 export const DashboardView: React.FC = () => {
-  const {
-    profile,
-    tasks,
-    sessions,
-    subjects,
-    predictions,
-    setActiveView,
-    openPriorityExplainer,
-    openRescheduleModal,
-    startSession,
-  } = useStoodify()
-
-  // Sesi hari ini yang belum selesai
-  const [todayDate] = React.useState(getTodayDate)
-  const todaySessions = sessions.filter((s) => s.date === todayDate && s.status !== 'completed')
-  const nextSession = todaySessions[0] || sessions[0]
-
-  // Top urgent tasks (sorted by priority score descending)
-  const urgentTasks = [...tasks]
-    .filter((t) => t.status !== 'selesai')
+  const { profile, tasks, sessions, subjects, predictions, setActiveView, openPriorityExplainer, openRescheduleModal, startSession } = useStoodify()
+  const nextSession = [...sessions]
+    .filter((session) => session.status === 'scheduled' && session.date >= localDate())
+    .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))[0]
+  const priorityTasks = [...tasks]
+    .filter((task) => task.status !== 'selesai')
     .sort((a, b) => b.priorityScore - a.priorityScore)
     .slice(0, 3)
-
-  // Subject lookup
-  const getSubject = (subjectId: string) => subjects.find((s) => s.id === subjectId)
+  const nextPrediction = predictions[0]
+  const predictionSubject = subjects.find((subject) => subject.id === nextPrediction?.subjectId)
 
   return (
-    <div className="space-y-12 text-left relative z-10">
-      {/* 1. Hero Text Block Sesuai DESIGN.md */}
-      <section className="text-center pt-8 pb-4 max-w-3xl mx-auto">
-        <div className="w-12 h-12 rounded-[5000px] bg-[#2727e6] text-white flex items-center justify-center mx-auto mb-4 shadow-hard-card">
-          <Sparkles size={24} />
+    <div className="relative z-10 space-y-10 text-left">
+      <section className="mx-auto max-w-3xl py-6 text-center">
+        <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-[#2727e6] text-white shadow-hard-card" aria-hidden="true">
+          <CalendarClock size={22} />
         </div>
-        <h1 className="text-3xl sm:text-5xl text-[#111118] tracking-tight font-normal leading-tight mb-4">
-          Halo, {profile.name.split(' ')[0]}! Rencana belajarmu sudah siap.
+        <p className="mb-2 font-mono text-xs text-[#111118]/70">RENCANA BELAJAR</p>
+        <h1 className="mb-4 text-3xl leading-tight tracking-tight text-[#111118]">
+          {profile.name === 'Siswa contoh' ? 'Mulai dari tugas yang paling perlu dicicil.' : `Halo, ${profile.name.split(' ')[0]}. Mulai dari sini.`}
         </h1>
-        <p className="text-base sm:text-lg text-[#111118]/70 max-w-2xl mx-auto font-normal leading-relaxed mb-6">
-          Stoodify telah menyelaraskan tugas sekolah, jadwal pelajaran, dan kegiatan rutinmu menjadi sesi belajar harian yang realistis tanpa rasa cemas.
+        <p className="mx-auto max-w-2xl text-base leading-relaxed text-[#111118]/75">
+          Tinjau alasan prioritas, lalu pilih waktu belajar yang sesuai dengan jadwalmu.
         </p>
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          {nextSession && (
-            <PillButton
-              variant="primary"
-              size="md"
-              withArrow
-              onClick={() => startSession(nextSession)}
-            >
-              Mulai Sesi Belajar Terdekat
-            </PillButton>
-          )}
-          <PillButton
-            variant="dark"
-            size="md"
-            onClick={() => openRescheduleModal()}
-          >
-            ⚡ Simulasikan Reschedule AI
-          </PillButton>
-        </div>
+        <p className="mt-4 text-xs text-[#111118]/70">Tampilan ini menggunakan data contoh yang tersimpan di perangkat.</p>
       </section>
 
-      {/* 2. Top Metric Cards */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <Card variant="default" className="w-full">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-mono uppercase text-[#111118]/60">Sesi Belajar Hari Ini</span>
-            <div className="w-8 h-8 rounded-[5000px] bg-[#e1edff] flex items-center justify-center text-[#2727e6]">
-              <Clock size={16} />
-            </div>
+      <section aria-labelledby="next-session-title">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="mb-1 font-mono text-xs text-[#111118]/70">SESI BERIKUTNYA</p>
+            <h2 id="next-session-title" className="text-2xl tracking-tight">Waktu belajar yang disarankan</h2>
           </div>
-          <div className="text-3xl font-mono text-[#111118] mb-1">
-            {todaySessions.length} Sesi <span className="text-sm text-[#111118]/60 font-sans font-normal">(90 Menit)</span>
-          </div>
-          <p className="text-xs text-[#111118]/70">
-            Terjadwal di jam santai malam: 19.00 - 20.45 WIB.
-          </p>
-        </Card>
-
-        <Card variant="default" className="w-full">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-mono uppercase text-[#111118]/60">Tugas Mendesak</span>
-            <div className="w-8 h-8 rounded-[5000px] bg-[#ffe8e8] flex items-center justify-center text-[#ff4141]">
-              <AlertTriangle size={16} />
-            </div>
-          </div>
-          <div className="text-3xl font-mono text-[#111118] mb-1">
-            {urgentTasks.length} Tugas <span className="text-sm text-[#ff4141] font-sans font-normal">(Prioritas Tinggi)</span>
-          </div>
-          <p className="text-xs text-[#111118]/70">
-            Dicicil per sesi agar tidak menumpuk H-1 deadline.
-          </p>
-        </Card>
-
-        <Card variant="default" className="w-full">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-mono uppercase text-[#111118]/60">Beban Belajar Siswa</span>
-            <div className="w-8 h-8 rounded-[5000px] bg-[#e8f7ee] flex items-center justify-center text-[#16ab59]">
-              <TrendingUp size={16} />
-            </div>
-          </div>
-          <div className="text-3xl font-mono text-[#16ab59] mb-1">
-            Terkendali <span className="text-sm text-[#111118]/60 font-sans font-normal">(Aman)</span>
-          </div>
-          <p className="text-xs text-[#111118]/70">
-            Tidak ada bentrok jadwal sekolah atau kelelahan belajar.
-          </p>
-        </Card>
-      </section>
-
-      {/* 3. Highlighted Next Study Session Runner */}
-      {nextSession && (
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-xl sm:text-2xl text-[#111118] font-normal">
-                Sesi Belajar Selanjutnya
-              </h2>
-              <p className="text-xs sm:text-sm text-[#111118]/60">
-                Sesi yang direkomendasikan AI untuk dikerjakan terlebih dahulu
-              </p>
-            </div>
-            <button
-              onClick={() => setActiveView('schedule')}
-              className="text-xs sm:text-sm text-[#2727e6] hover:underline cursor-pointer flex items-center gap-1"
-            >
-              <span>Lihat Semua Sesi</span>
-              <ChevronRight size={16} />
-            </button>
-          </div>
-
-          <div className="p-6 sm:p-8 rounded-[24px] bg-white border border-[#2727e6] shadow-hard-cta relative overflow-hidden">
-            {/* Top Tag Row */}
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <div className="flex items-center gap-2">
-                <Badge variant="active" size="md">
-                  {getSubject(nextSession.subjectId)?.name || 'Mata Pelajaran'}
-                </Badge>
-                <Badge variant="mono" size="sm">
-                  {nextSession.startTime} - {nextSession.endTime} ({nextSession.durationMinutes}m)
-                </Badge>
-              </div>
-              <Badge
-                variant={nextSession.priority === 'sangat-tinggi' ? 'priority-urgent' : 'priority-high'}
-                size="sm"
-              >
-                {nextSession.priority.toUpperCase()}
-              </Badge>
-            </div>
-
-            {/* Session Title & Target */}
-            <h3 className="text-2xl sm:text-3xl text-[#111118] mb-2 font-normal">
-              {nextSession.title}
-            </h3>
-            <p className="text-sm text-[#111118]/80 mb-6 leading-relaxed max-w-2xl">
-              🎯 <strong className="font-medium text-[#111118]">Target Sesi:</strong> {nextSession.targetDescription}
-            </p>
-
-            {/* Explainable AI Note */}
-            <div className="p-4 rounded-[16px] bg-[#f0f6ff] border border-[#e1edff] mb-6 text-xs text-[#111118]/80 flex items-start gap-2.5">
-              <Sparkles size={16} className="text-[#2727e6] flex-shrink-0 mt-0.5" />
-              <div>
-                <span className="font-medium text-[#111118]">Alasan Penjadwalan AI: </span>
-                {nextSession.reason}
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-[#e1edff]">
-              <div className="text-xs text-[#111118]/60">
-                Waktu santai setelah sekolah & rutinitas pribadi
-              </div>
-              <div className="flex items-center gap-2">
-                <PillButton
-                  variant="outline"
-                  size="sm"
-                  onClick={() => openRescheduleModal(nextSession)}
-                >
-                  Lewati / Reschedule
-                </PillButton>
-                <PillButton
-                  variant="primary"
-                  size="md"
-                  withArrow
-                  onClick={() => startSession(nextSession)}
-                >
-                  Mulai Belajar Sekarang
-                </PillButton>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* 4. Priority Tasks & Next Topic Anticipation Grid */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left 2 Cols: Urgent Tasks List */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl sm:text-2xl text-[#111118] font-normal">
-                Tugas Prioritas Utama
-              </h2>
-              <p className="text-xs sm:text-sm text-[#111118]/60">
-                Skor dihitung otomatis berdasarkan deadline, tingkat kesulitan, dan durasi
-              </p>
-            </div>
-            <button
-              onClick={() => setActiveView('tasks')}
-              className="text-xs sm:text-sm text-[#2727e6] hover:underline cursor-pointer flex items-center gap-1"
-            >
-              <span>Kelola Semua ({tasks.length})</span>
-              <ChevronRight size={16} />
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            {urgentTasks.map((task) => {
-              const subj = getSubject(task.subjectId)
-              return (
-                <Card
-                  key={task.id}
-                  interactive
-                  onClick={() => openPriorityExplainer(task)}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                >
-                  <div className="space-y-1.5 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="text-[11px] font-mono px-2 py-0.5 rounded-[5000px] text-white"
-                        style={{ backgroundColor: subj?.color || '#2727e6' }}
-                      >
-                        {subj?.code}
-                      </span>
-                      <span className="text-xs text-[#111118]/60">
-                        Deadline: {new Date(task.deadline).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })}
-                      </span>
-                      <span className="text-xs text-[#111118]/40">•</span>
-                      <span className="text-xs text-[#111118]/60">
-                        {task.estimatedDurationMinutes}m pengerjaan
-                      </span>
-                    </div>
-
-                    <h4 className="text-base text-[#111118] font-normal leading-snug">
-                      {task.title}
-                    </h4>
-
-                    {/* Progress Bar */}
-                    <div className="flex items-center gap-2 pt-1 max-w-xs">
-                      <div className="w-full bg-[#e1edff] h-2 rounded-[5000px] overflow-hidden">
-                        <div
-                          className="bg-[#2727e6] h-full rounded-[5000px] transition-all"
-                          style={{ width: `${task.progressPercent}%` }}
-                        />
-                      </div>
-                      <span className="text-xs font-mono text-[#111118]/70">
-                        {task.progressPercent}%
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-2 sm:pt-0 border-[#e1edff] gap-1">
-                    <Badge
-                      variant={
-                        task.priority === 'sangat-tinggi'
-                          ? 'priority-urgent'
-                          : task.priority === 'tinggi'
-                          ? 'priority-high'
-                          : 'priority-medium'
-                      }
-                      size="sm"
-                    >
-                      Skor {task.priorityScore}
-                    </Badge>
-                    <span className="text-[11px] text-[#2727e6] hover:underline flex items-center gap-0.5">
-                      Lihat Alasan AI →
-                    </span>
-                  </div>
-                </Card>
-              )
-            })}
-          </div>
+          <button type="button" onClick={() => setActiveView('schedule')} className="inline-flex min-h-11 items-center gap-1 text-sm text-[#2727e6] underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2727e6]">
+            Semua sesi <ChevronRight size={16} aria-hidden="true" />
+          </button>
         </div>
 
-        {/* Right 1 Col: Next Topic Anticipation Teaser */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl sm:text-2xl text-[#111118] font-normal flex items-center gap-2">
-              <Brain size={20} className="text-[#2727e6]" />
-              <span>Prediksi Materi</span>
-            </h2>
-            <button
-              onClick={() => setActiveView('predictions')}
-              className="text-xs sm:text-sm text-[#2727e6] hover:underline cursor-pointer"
-            >
-              Detail →
-            </button>
+        {nextSession ? (
+          <div className="rounded-[24px] border border-[#e1edff] bg-white p-5 shadow-hard-cta">
+            <div className="mb-5 flex flex-wrap items-center gap-2">
+              <Badge variant="active" size="sm">{subjects.find((subject) => subject.id === nextSession.subjectId)?.name ?? 'Mata pelajaran'}</Badge>
+              <Badge variant="mono" size="sm"><Clock3 size={13} aria-hidden="true" />{nextSession.date} · {nextSession.startTime}–{nextSession.endTime}</Badge>
+            </div>
+            <h3 className="mb-2 text-xl">{nextSession.title}</h3>
+            <p className="max-w-2xl text-sm leading-relaxed text-[#111118]/80">Target sesi: {nextSession.targetDescription}</p>
+            <div className="mt-5 rounded-[16px] bg-[#f0f6ff] p-4 text-sm leading-relaxed text-[#111118]/80">
+              <span className="mr-1 text-[#111118]">Alasan contoh:</span>{nextSession.reason}
+            </div>
+            <div className="mt-6 flex flex-col gap-3 border-t border-[#e1edff] pt-5">
+              <span className="text-xs text-[#111118]/70">Rekomendasi ini dapat diubah kapan saja.</span>
+              <div className="flex flex-col gap-2">
+                <PillButton variant="outline" size="sm" onClick={() => openRescheduleModal(nextSession)}>Simulasikan sesi terlewat</PillButton>
+                <PillButton variant="primary" size="sm" onClick={() => startSession(nextSession)}>Mulai sesi</PillButton>
+              </div>
+            </div>
           </div>
-
-          <Card variant="wash" className="space-y-4 border-[#2727e6]/30">
-            <div className="flex items-center justify-between">
-              <Badge variant="mono" size="sm">
-                MATEMATIKA TERAPAN
-              </Badge>
-              <span className="text-xs font-mono text-[#2727e6] bg-[#e1edff] px-2 py-0.5 rounded-[5000px]">
-                78% Keyakinan
-              </span>
-            </div>
-
-            <div>
-              <p className="text-xs text-[#111118]/60 uppercase font-mono mb-1">Topik Selanjutnya:</p>
-              <h4 className="text-lg text-[#111118] font-normal">
-                {predictions[0]?.predictedTopic}
-              </h4>
-            </div>
-
-            <p className="text-xs text-[#111118]/70 leading-relaxed font-normal">
-              Berdasarkan 3 tugas terakhir: <em>{predictions[0]?.recentTopics.join(', ')}</em>.
-            </p>
-
-            <div className="p-3 rounded-[16px] bg-white border border-[#e1edff] text-xs space-y-1">
-              <span className="font-medium text-[#111118] block">💡 Saran Persiapan:</span>
-              <p className="text-[#111118]/70 text-[11px] leading-relaxed">
-                {predictions[0]?.preparationTips}
-              </p>
-            </div>
-
-            <PillButton
-              variant="outline"
-              size="sm"
-              className="w-full text-xs"
-              onClick={() => setActiveView('predictions')}
-            >
-              Buka Semua Prediksi Mapel
-            </PillButton>
+        ) : (
+          <Card className="text-center">
+            <p className="mb-3 text-sm text-[#111118]/75">Belum ada sesi belajar yang akan datang.</p>
+            <PillButton variant="primary" size="sm" onClick={() => setActiveView('tasks')}>Lihat tugas</PillButton>
           </Card>
-        </div>
+        )}
       </section>
 
-      {/* 5. Incubation Showcase Banner */}
-      <section className="p-6 sm:p-8 rounded-[24px] bg-[#111118] text-white flex flex-col sm:flex-row items-center justify-between gap-6 shadow-hard-card">
-        <div className="space-y-2 text-left">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-mono uppercase bg-[#2727e6] text-white px-2.5 py-0.5 rounded-[5000px]">
-              Diferensiator Utama
-            </span>
-            <span className="text-xs text-gray-400">Pameran Startup Pendidikan 2026</span>
+      <section className="grid grid-cols-1 gap-8[minmax(0,1.4fr)_minmax(260px,0.8fr)]">
+        <div>
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="mb-1 font-mono text-xs text-[#111118]/70">TUGAS AKTIF</p>
+              <h2 className="text-2xl tracking-tight">Mulai dari prioritas tertinggi</h2>
+            </div>
+            <button type="button" onClick={() => setActiveView('tasks')} className="inline-flex min-h-11 items-center gap-1 text-sm text-[#2727e6] underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2727e6]">
+              Semua tugas <ChevronRight size={16} aria-hidden="true" />
+            </button>
           </div>
-          <h3 className="text-2xl text-white font-normal">
-            Bagaimana jika siswa melewatkan jadwal belajarnya?
-          </h3>
-          <p className="text-sm text-gray-300 max-w-xl font-normal leading-relaxed">
-            Stoodify dilengkapi <strong>Adaptive Rescheduling Engine</strong> yang menghitung ulang slot kosong hari berikutnya tanpa membuat jadwal bentrok atau melewati batas deadline.
-          </p>
+          {priorityTasks.length ? <div className="space-y-3">
+            {priorityTasks.map((task) => {
+              const subject = subjects.find((item) => item.id === task.subjectId)
+              return <Card key={task.id} className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="rounded-full bg-[#e1edff] px-3 py-1 text-xs text-[#111118]">{subject?.name ?? 'Mata pelajaran'}</span>
+                  <Badge variant={task.priority === 'sangat-tinggi' ? 'priority-urgent' : task.priority === 'tinggi' ? 'priority-high' : 'default'} size="sm">Skor contoh {task.priorityScore}</Badge>
+                </div>
+                <h3 className="text-lg leading-snug">{task.title}</h3>
+                <div className="flex items-center justify-between gap-3 text-xs text-[#111118]/75">
+                  <span>Deadline {new Date(task.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} · progres {task.progressPercent}%</span>
+                  <button type="button" onClick={() => openPriorityExplainer(task)} className="min-h-11 shrink-0 text-[#2727e6] underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2727e6]">Alasan skor</button>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-[#e1edff]" role="progressbar" aria-label={`Progres ${task.title}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={task.progressPercent}>
+                  <div className="h-full rounded-full bg-[#2727e6]" style={{ width: `${task.progressPercent}%` }} />
+                </div>
+              </Card>
+            })}
+          </div> : <Card className="text-sm text-[#111118]/75">Semua tugas contoh sudah selesai. Tambahkan tugas baru untuk melihat prioritas.</Card>}
         </div>
 
-        <PillButton
-          variant="primary"
-          size="md"
-          withArrow
-          onClick={() => openRescheduleModal()}
-          className="flex-shrink-0"
-        >
-          Coba Demo Rescheduling
-        </PillButton>
+        <aside className="border-t border-[#e1edff] pt-6">
+          <div className="mb-4 flex items-center gap-2 text-[#2727e6]"><NotebookPen size={18} aria-hidden="true" /><p className="font-mono text-xs">PERSIAPAN MATERI</p></div>
+          {nextPrediction ? <div className="space-y-4">
+            <div>
+              <p className="text-sm text-[#111118]/75">{predictionSubject?.name ?? 'Mata pelajaran'}</p>
+              <h2 className="mt-1 text-2xl tracking-tight">{nextPrediction.predictedTopic}</h2>
+            </div>
+            <p className="text-sm leading-relaxed text-[#111118]/80">{nextPrediction.reason}</p>
+            <p className="text-sm text-[#111118]/75">Keyakinan contoh: {nextPrediction.confidencePercent}%</p>
+            <button type="button" onClick={() => setActiveView('predictions')} className="inline-flex min-h-11 items-center gap-2 text-sm text-[#2727e6] underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2727e6]">
+              Lihat dasar dan saran <ChevronRight size={16} aria-hidden="true" />
+            </button>
+          </div> : <p className="text-sm text-[#111118]/75">Belum ada data contoh untuk prediksi materi.</p>}
+          <div className="mt-6 flex gap-2 border-t border-[#e1edff] pt-4 text-xs leading-relaxed text-[#111118]/70">
+            <CircleHelp size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
+            Prediksi adalah contoh, bukan kepastian. Siswa tetap menentukan langkah belajarnya.
+          </div>
+        </aside>
       </section>
     </div>
   )

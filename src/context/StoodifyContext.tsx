@@ -7,7 +7,6 @@ import type {
   SchoolSchedule,
   RoutineActivity,
   TopicPrediction,
-  TaskPriority,
   TaskStatus,
 } from '../types/stoodify'
 import {
@@ -21,68 +20,76 @@ import {
 } from '../data/initialData'
 import { StoodifyContext } from './context'
 import type { ActiveView } from './context'
+import { calculatePriority as calculateTaskPriority, refreshTaskPriority } from '../utils/priority'
 
 export type { ActiveView }
 
 const STORAGE_KEY = 'stoodify_prototype_state_v1'
 
+const localDate = (date: Date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const readStored = <T,>(key: string, fallback: T): T => {
+  try {
+    const saved = localStorage.getItem(`${STORAGE_KEY}_${key}`)
+    const value = saved ? (JSON.parse(saved) as T) : fallback
+    if (key === 'tasks' && Array.isArray(value)) return value.map((task) => refreshTaskPriority(task as Task)) as T
+    return value
+  } catch {
+    return fallback
+  }
+}
+
+const writeStored = (key: string, value: unknown) => {
+  try {
+    localStorage.setItem(`${STORAGE_KEY}_${key}`, JSON.stringify(value))
+  } catch {
+    // The prototype stays usable when browser storage is unavailable.
+  }
+}
+
 export const StoodifyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Load saved state or default
-  const [profile, setProfile] = useState<StudentProfile>(() => {
-    const saved = localStorage.getItem(`${STORAGE_KEY}_profile`)
-    return saved ? JSON.parse(saved) : initialProfile
-  })
+  const [profile, setProfile] = useState<StudentProfile>(() => readStored('profile', initialProfile))
 
   const [subjects] = useState<Subject[]>(initialSubjects)
 
-  const [tasks, setTasks] = useState<Task[]>(() => {
-    const saved = localStorage.getItem(`${STORAGE_KEY}_tasks`)
-    return saved ? JSON.parse(saved) : initialTasks
-  })
+  const [tasks, setTasks] = useState<Task[]>(() => readStored('tasks', initialTasks))
 
-  const [sessions, setSessions] = useState<StudySession[]>(() => {
-    const saved = localStorage.getItem(`${STORAGE_KEY}_sessions`)
-    return saved ? JSON.parse(saved) : initialSessions
-  })
+  const [sessions, setSessions] = useState<StudySession[]>(() => readStored('sessions', initialSessions))
 
   const [schedules] = useState<SchoolSchedule[]>(initialSchedules)
   const [routines] = useState<RoutineActivity[]>(initialRoutines)
 
-  const [predictions, setPredictions] = useState<TopicPrediction[]>(() => {
-    const saved = localStorage.getItem(`${STORAGE_KEY}_predictions`)
-    return saved ? JSON.parse(saved) : initialPredictions
-  })
+  const [predictions, setPredictions] = useState<TopicPrediction[]>(() => readStored('predictions', initialPredictions))
 
-  // Navigation & UI States
   const [activeView, setActiveView] = useState<ActiveView>('dashboard')
   const [selectedTaskForDetail, setSelectedTaskForDetail] = useState<Task | null>(null)
-  const [activeSessionRunning, setActiveSessionRunning] = useState<StudySession | null>(null)
 
-  // Modals
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false)
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false)
   const [isPriorityExplainerOpen, setIsPriorityExplainerOpen] = useState(false)
-  const [isFocusTimerOpen, setIsFocusTimerOpen] = useState(false)
   const [selectedSessionForAction, setSelectedSessionForAction] = useState<StudySession | null>(null)
 
-  // Sync to localStorage
   useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY}_profile`, JSON.stringify(profile))
+    writeStored('profile', profile)
   }, [profile])
 
   useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY}_tasks`, JSON.stringify(tasks))
+    writeStored('tasks', tasks)
   }, [tasks])
 
   useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY}_sessions`, JSON.stringify(sessions))
+    writeStored('sessions', sessions)
   }, [sessions])
 
   useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY}_predictions`, JSON.stringify(predictions))
+    writeStored('predictions', predictions)
   }, [predictions])
 
-  // Sync hash routing if desired
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash.replace('#', '') as ActiveView
@@ -98,93 +105,11 @@ export const StoodifyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const handleSetActiveView = (view: ActiveView) => {
     setActiveView(view)
     window.location.hash = view
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    document.querySelector<HTMLElement>('.mobile-content')?.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  // Multi-factor Explainable AI Priority Calculation Formula
-  const calculatePriority = (
-    deadline: string,
-    difficulty: number,
-    durationMinutes: number,
-    progressPercent: number
-  ) => {
-    const now = new Date()
-    const targetDate = new Date(deadline)
-    const diffHours = (targetDate.getTime() - now.getTime()) / (1000 * 60 * 60)
+  const calculatePriority = calculateTaskPriority
 
-    // 1. Urgency score (max 40)
-    let urgencyScore = 10
-    if (diffHours <= 0) {
-      urgencyScore = 40
-    } else if (diffHours <= 24) {
-      urgencyScore = 38
-    } else if (diffHours <= 48) {
-      urgencyScore = 30
-    } else if (diffHours <= 72) {
-      urgencyScore = 22
-    } else if (diffHours <= 120) {
-      urgencyScore = 15
-    } else {
-      urgencyScore = 8
-    }
-
-    // 2. Difficulty score (max 25)
-    const difficultyScore = Math.min(25, difficulty * 5)
-
-    // 3. Duration score (max 20)
-    const durationScore = Math.min(20, Math.round((durationMinutes / 180) * 20))
-
-    // 4. Late risk score (max 20)
-    let lateRiskScore = 10
-    if (diffHours < 36 && durationMinutes >= 120) {
-      lateRiskScore = 20
-    } else if (diffHours < 48 && durationMinutes >= 90) {
-      lateRiskScore = 16
-    } else if (diffHours < 72) {
-      lateRiskScore = 12
-    } else {
-      lateRiskScore = 6
-    }
-
-    // 5. Progress reduction (max 15)
-    const progressScore = Math.round((progressPercent / 100) * 15)
-
-    // Total calculation
-    const totalScore = Math.max(10, Math.min(100, urgencyScore + difficultyScore + durationScore + lateRiskScore - progressScore))
-
-    let priority: TaskPriority = 'rendah'
-    let reason = ''
-
-    if (totalScore >= 80) {
-      priority = 'sangat-tinggi'
-      reason = `Prioritas Sangat Tinggi karena sisa batas waktu tersisa ${Math.max(1, Math.round(diffHours / 24))} hari dengan estimasi pengerjaan ${Math.round(durationMinutes / 60)} jam dan tingkat kesulitan level ${difficulty}/5.`
-    } else if (totalScore >= 65) {
-      priority = 'tinggi'
-      reason = `Prioritas Tinggi mengingat beban tugas cukup signifikan (${durationMinutes} menit) dan perlu dicicil lebih awal sebelum jadwal menumpuk.`
-    } else if (totalScore >= 45) {
-      priority = 'sedang'
-      reason = `Prioritas Sedang karena tenggat waktu masih cukup proporsional dengan estimasi waktu pengerjaan (${durationMinutes} menit).`
-    } else {
-      priority = 'rendah'
-      reason = `Prioritas Rendah karena batas waktu pengumpulan masih relatif panjang dan tingkat kesulitan tergolong ringan.`
-    }
-
-    return {
-      score: totalScore,
-      priority,
-      reason,
-      breakdown: {
-        urgencyScore,
-        difficultyScore,
-        durationScore,
-        lateRiskScore,
-        progressScore,
-        totalScore,
-      },
-    }
-  }
-
-  // Task Actions
   const addTask = (
     title: string,
     subjectId: string,
@@ -198,7 +123,8 @@ export const StoodifyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       deadline,
       difficulty,
       estimatedDurationMinutes,
-      0
+      0,
+      type
     )
 
     const newTask: Task = {
@@ -226,22 +152,26 @@ export const StoodifyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     setTasks((prev) => [newTask, ...prev])
 
-    // Otomatis buat rekomendasi sesi belajar untuk tugas ini di slot malam
-    const targetDate = deadline.split('T')[0]
+    // Tugas baru mendapat usulan sesi pada malam sebelum tenggat.
+    const deadlineDate = new Date(`${deadline.split('T')[0]}T12:00:00`)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    if (deadlineDate.getTime() > today.getTime()) deadlineDate.setDate(deadlineDate.getDate() - 1)
+    const targetDate = localDate(deadlineDate)
     const newSession: StudySession = {
       id: `sess-${Date.now()}`,
       taskId: newTask.id,
       title: `Sesi Belajar: ${newTask.title}`,
       subjectId: newTask.subjectId,
-      date: targetDate || new Date().toISOString().split('T')[0],
+      date: targetDate || localDate(new Date()),
       startTime: '19:00',
       endTime: '19:45',
       durationMinutes: Math.min(45, newTask.estimatedDurationMinutes),
       targetProgress: 50,
       targetDescription: 'Memulai tahap awal dan menyelesaikan subtask pertama.',
       priority: newTask.priority,
-      reason: 'Sesi otomatis dijadwalkan oleh AI Stoodify sesuai jam belajar pilihanmu (19.00 - 21.45).',
-      status: 'scheduled',
+      reason: 'Contoh rekomendasi sesi berdasarkan prioritas tugas dan waktu belajar yang dipilih.',
+      status: 'proposed',
       riskLevel: newTask.priority === 'sangat-tinggi' ? 'tinggi' : 'sedang',
     }
 
@@ -253,10 +183,15 @@ export const StoodifyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       prev.map((t) => {
         if (t.id === taskId) {
           const progressPercent = status === 'selesai' ? 100 : t.progressPercent
+          const calculated = calculatePriority(t.deadline, t.difficulty, t.estimatedDurationMinutes, progressPercent, t.type)
           return {
             ...t,
             status,
             progressPercent,
+            priority: calculated.priority,
+            priorityScore: calculated.score,
+            priorityReason: calculated.reason,
+            priorityBreakdown: calculated.breakdown,
             subtasks: status === 'selesai' ? t.subtasks.map((s) => ({ ...s, completed: true })) : t.subtasks,
           }
         }
@@ -277,7 +212,8 @@ export const StoodifyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             t.deadline,
             t.difficulty,
             t.estimatedDurationMinutes,
-            clamped
+            clamped,
+            t.type
           )
 
           return {
@@ -303,14 +239,19 @@ export const StoodifyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             st.id === subtaskId ? { ...st, completed: !st.completed } : st
           )
           const completedCount = updatedSubtasks.filter((st) => st.completed).length
-          const progressPercent = Math.round((completedCount / updatedSubtasks.length) * 100)
+          const progressPercent = updatedSubtasks.length ? Math.round((completedCount / updatedSubtasks.length) * 100) : t.progressPercent
           const newStatus: TaskStatus = progressPercent >= 100 ? 'selesai' : progressPercent > 0 ? 'sedang-dikerjakan' : 'belum-mulai'
+          const calculated = calculatePriority(t.deadline, t.difficulty, t.estimatedDurationMinutes, progressPercent, t.type)
 
           return {
             ...t,
             subtasks: updatedSubtasks,
             progressPercent,
             status: newStatus,
+            priority: calculated.priority,
+            priorityScore: calculated.score,
+            priorityReason: calculated.reason,
+            priorityBreakdown: calculated.breakdown,
           }
         }
         return t
@@ -323,10 +264,10 @@ export const StoodifyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setSessions((prev) => prev.filter((s) => s.taskId !== taskId))
   }
 
-  // Session Runner & Rescheduling
   const startSession = (session: StudySession) => {
-    setActiveSessionRunning(session)
-    setIsFocusTimerOpen(true)
+    setSessions((prev) => prev.map((item) => item.id === session.id && item.status === 'scheduled'
+      ? { ...item, status: 'in-progress' }
+      : item))
   }
 
   const completeSession = (sessionId: string, progressGained: number) => {
@@ -341,24 +282,31 @@ export const StoodifyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         updateTaskProgress(task.id, Math.min(100, task.progressPercent + progressGained))
       }
     }
-    setIsFocusTimerOpen(false)
-    setActiveSessionRunning(null)
   }
 
-  // Adaptive Rescheduling Simulator (Core Showcase Differentiator)
+  const acceptSession = (sessionId: string) => {
+    setSessions((prev) => prev.map((session) => session.id === sessionId && session.status === 'proposed'
+      ? { ...session, status: 'scheduled' }
+      : session))
+  }
+
+  const rejectSession = (sessionId: string) => {
+    setSessions((prev) => prev.map((session) => session.id === sessionId && session.status === 'proposed'
+      ? { ...session, status: 'rejected' }
+      : session))
+  }
+
   const simulateReschedule = (sessionId: string) => {
     const targetSession = sessions.find((s) => s.id === sessionId)
     if (!targetSession) return
 
-    // Temukan hari berikutnya
     const sessionDate = new Date(targetSession.date)
     sessionDate.setDate(sessionDate.getDate() + 1)
-    const nextDate = sessionDate.toISOString().split('T')[0]
+    const nextDate = localDate(sessionDate)
 
     const newStartTime = '20:15'
     const newEndTime = '21:00'
 
-    // Tandai sesi lama sebagai skipped/rescheduled dan buat sesi kompensasi
     setSessions((prev) => {
       const updated = prev.map((s) => {
         if (s.id === sessionId) {
@@ -369,14 +317,14 @@ export const StoodifyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               date: nextDate,
               startTime: newStartTime,
               endTime: newEndTime,
-              reason: 'Sesi hari ini dilewati siswa. AI menyusun ulang ke slot bebas besok tanpa bentrok jadwal sekolah atau melampaui deadline.',
+              reason: 'Sesi terlewat. Contoh ini memindahkannya ke slot yang disediakan untuk demo.',
             },
           }
         }
         return s
       })
 
-      // Tambahkan sesi reschedule baru jika belum ada
+      // Jangan buat sesi pengganti ganda saat simulasi diulang.
       const existingNew = updated.find((s) => s.id === `${sessionId}-rescheduled`)
       if (!existingNew) {
         const rescheduledSession: StudySession = {
@@ -386,7 +334,7 @@ export const StoodifyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           startTime: newStartTime,
           endTime: newEndTime,
           status: 'scheduled',
-          reason: `Hasil Adaptive Rescheduling dari sesi ${targetSession.startTime}. Dipindahkan ke jam 20.15 tanpa bentrok jam sekolah.`,
+          reason: `Contoh penjadwalan ulang dari sesi ${targetSession.startTime}.`,
         }
         return [...updated, rescheduledSession]
       }
@@ -408,7 +356,7 @@ export const StoodifyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     localStorage.removeItem(`${STORAGE_KEY}_sessions`)
     localStorage.removeItem(`${STORAGE_KEY}_predictions`)
     setProfile(initialProfile)
-    setTasks(initialTasks)
+    setTasks(initialTasks.map(refreshTaskPriority))
     setSessions(initialSessions)
     setPredictions(initialPredictions)
     setActiveView('dashboard')
@@ -430,12 +378,6 @@ export const StoodifyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }
   const closeRescheduleModal = () => setIsRescheduleModalOpen(false)
 
-  const openFocusTimer = (session?: StudySession) => {
-    if (session) setActiveSessionRunning(session)
-    setIsFocusTimerOpen(true)
-  }
-  const closeFocusTimer = () => setIsFocusTimerOpen(false)
-
   return (
     <StoodifyContext.Provider
       value={{
@@ -450,20 +392,16 @@ export const StoodifyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setActiveView: handleSetActiveView,
         selectedTaskForDetail,
         setSelectedTaskForDetail,
-        activeSessionRunning,
         selectedSessionForAction,
         isAddTaskModalOpen,
         isRescheduleModalOpen,
         isPriorityExplainerOpen,
-        isFocusTimerOpen,
         openAddTask,
         closeAddTask,
         openPriorityExplainer,
         closePriorityExplainer,
         openRescheduleModal,
         closeRescheduleModal,
-        openFocusTimer,
-        closeFocusTimer,
         calculatePriority,
         addTask,
         updateTaskStatus,
@@ -472,6 +410,8 @@ export const StoodifyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         deleteTask,
         startSession,
         completeSession,
+        acceptSession,
+        rejectSession,
         simulateReschedule,
         givePredictionFeedback,
         resetToDefault,

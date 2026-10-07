@@ -26,29 +26,26 @@ export interface StoodifyContextType {
   setActiveView: (view: ActiveView) => void
   selectedTaskForDetail: Task | null
   setSelectedTaskForDetail: (task: Task | null) => void
-  activeSessionRunning: StudySession | null
   selectedSessionForAction: StudySession | null
 
   // Modals
   isAddTaskModalOpen: boolean
   isRescheduleModalOpen: boolean
   isPriorityExplainerOpen: boolean
-  isFocusTimerOpen: boolean
   openAddTask: () => void
   closeAddTask: () => void
   openPriorityExplainer: (task?: Task) => void
   closePriorityExplainer: () => void
   openRescheduleModal: (session?: StudySession) => void
   closeRescheduleModal: () => void
-  openFocusTimer: (session?: StudySession) => void
-  closeFocusTimer: () => void
 
   // Engine Actions
   calculatePriority: (
     deadline: string,
     difficulty: number,
     durationMinutes: number,
-    progressPercent: number
+    progressPercent: number,
+    type?: Task['type']
   ) => {
     score: number
     priority: TaskPriority
@@ -72,6 +69,8 @@ export interface StoodifyContextType {
   // Session Actions
   startSession: (session: StudySession) => void
   completeSession: (sessionId: string, progressGained: number) => void
+  acceptSession: (sessionId: string) => void
+  rejectSession: (sessionId: string) => void
   simulateReschedule: (sessionId: string) => void
 
   // Prediction Actions

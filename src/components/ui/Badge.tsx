@@ -22,11 +22,11 @@ export const Badge: React.FC<BadgeProps> = ({
   const variantStyles = {
     default: 'bg-[#e1edff] text-[#111118]',
     active: 'bg-[#2727e6] text-white',
-    'priority-urgent': 'bg-[#ff4141] text-white',
-    'priority-high': 'bg-[#ffda00] text-[#111118]',
-    'priority-medium': 'bg-[#91d8ec] text-[#111118]',
-    'priority-low': 'bg-[#e1edff] text-[#4b5563]',
-    success: 'bg-[#16ab59] text-white',
+    'priority-urgent': 'bg-[#111118] text-white',
+    'priority-high': 'bg-[#e1edff] text-[#111118]',
+    'priority-medium': 'bg-[#f0f6ff] text-[#111118]',
+    'priority-low': 'bg-white border border-[#e1edff] text-[#111118]',
+    success: 'bg-[#e1edff] text-[#111118]',
     warning: 'bg-[#ffda00] text-[#111118]',
     mono: 'bg-[#111118] text-white font-mono tracking-tight',
   }
